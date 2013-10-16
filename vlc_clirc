@@ -1,0 +1,99 @@
+#!/bin/zsh
+# Author: Philipp Schmitt
+# Version: 1.0
+
+[[ -z "$VLC_HOST" ]] && VLC_HOST="localhost"
+[[ -z "$VLC_PORT" ]] && VLC_PORT="8080"
+
+
+usage() {
+    echo "Usage: $1 CMD [-h VLC_HOST] [-p VLC_PORT]"
+    echo "Control VLC via CLI (HTTP inteface needs to be enabled)"
+    echo "    play|pause|toggle|p|t: toggle play/pause"
+    echo "    stop|s: stop playback"
+    echo "    next|n: play next in playlist"
+    echo "    previous|prev: play previous in playlist"
+    echo "    vol [+-]VAL: inc/dec volume"
+    echo "    fs: toggle fullscreen"
+}
+
+play_pause() {
+    echo "play/pause"
+    curl --request GET "${RC_URL}pl_pause" &> /dev/null
+}
+
+stop() {
+    echo "stop"
+    curl --request GET "${RC_URL}pl_stop" &> /dev/null
+}
+
+next() {
+    echo "next"
+    curl --request GET "${RC_URL}pl_next" &> /dev/null
+}
+
+previous() {
+    echo "previous"
+    curl --request GET "${RC_URL}pl_previous" &> /dev/null
+}
+
+volume() {
+    echo "volume ($1)"
+    curl --request GET "${RC_URL}volume&val=${1}" &> /dev/null
+}
+
+fullscreen() {
+    echo "fullscreen"
+    curl --request GET "${RC_URL}fullscreen" &> /dev/null
+}
+
+[[ $# -eq 0 ]] && { usage; exit 0; } 
+
+while getopts ":h:p:" opt; do
+    case $opt in
+        h)
+            VLC_HOST=$OPTARG
+            ;;
+        p)
+            VLC_PORT=$OPTARG
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            usage
+            exit 1
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+shift $(($OPTIND - 1))
+echo -n "$VLC_HOST:$VLC_PORT -> "
+RC_URL="http://$VLC_HOST:$VLC_PORT/requests/status.xml?command="
+
+case "$1" in
+    pause|play|toggle|p|t)
+        play_pause
+        ;;
+    stop|s)
+        stop
+        ;;
+    next|n)
+        next
+        ;;
+    previous|prev)
+        previous
+        ;;
+    volume|vol|v)
+        volume $2
+        ;;
+    fullscreen|fs)
+        fullscreen
+        ;;
+    *)
+        usage $(basename $0)
+        ;;
+esac
